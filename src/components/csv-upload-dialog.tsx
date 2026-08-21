@@ -18,7 +18,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, FileSpreadsheet, X, CheckCircle2 } from "lucide-react";
 import { parseCsvFile, type ParseResult } from "@/lib/csv-parser";
 import { useAppDispatch } from "@/store/store";
@@ -108,19 +107,22 @@ export function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-heading">
-            <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Upload CSV File
-          </DialogTitle>
-          <DialogDescription>
-            Upload a CSV file to load data into the table. Supported format: .csv
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col overflow-hidden p-0">
+        {/* Fixed header */}
+        <div className="px-6 pt-6 pb-3 shrink-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-heading">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Upload CSV File
+            </DialogTitle>
+            <DialogDescription>
+              Upload a CSV file to load data into the table. Supported format: .csv
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         {!preview ? (
-          <div className="space-y-4">
+          <div className="space-y-4 px-6 pb-6">
             {/* Drag & drop zone */}
             <div
               className={`
@@ -177,88 +179,94 @@ export function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
             )}
           </div>
         ) : (
-          <div className="space-y-4 flex-1 min-h-0 flex flex-col">
-            {/* File info */}
-            <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium">{fileName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {preview.rows.length} rows · {preview.columns.length} columns
-                  </p>
+          <>
+            {/* Scrollable middle content */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 scrollbar-hide">
+              {/* File info */}
+              <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">{fileName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {preview.rows.length} rows · {preview.columns.length} columns
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleReset}>
+                  Change file
+                </Button>
+              </div>
+
+              {/* Columns badge list */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Detected Columns
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {preview.columns.map((col) => (
+                    <Badge key={col} variant="secondary" className="text-xs">
+                      {col}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleReset}>
-                Change file
-              </Button>
-            </div>
 
-            {/* Columns badge list */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Detected Columns
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {preview.columns.map((col) => (
-                  <Badge key={col} variant="secondary" className="text-xs">
-                    {col}
-                  </Badge>
-                ))}
+              {/* Preview table */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Preview (first 5 rows)
+                </p>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {previewColumns.map((col) => (
+                            <TableHead
+                              key={col}
+                              className="text-xs whitespace-nowrap"
+                            >
+                              {col}
+                            </TableHead>
+                          ))}
+                          {preview.columns.length > 8 && (
+                            <TableHead className="text-xs text-muted-foreground">
+                              +{preview.columns.length - 8} more
+                            </TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {previewRows.map((row, i) => (
+                          <TableRow key={i}>
+                            {previewColumns.map((col) => (
+                              <TableCell
+                                key={col}
+                                className="text-xs whitespace-nowrap max-w-[150px] truncate"
+                              >
+                                {row[col] ?? ""}
+                              </TableCell>
+                            ))}
+                            {preview.columns.length > 8 && (
+                              <TableCell className="text-xs text-muted-foreground">
+                                …
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Preview table */}
-            <div className="space-y-2 flex-1 min-h-0">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Preview (first 5 rows)
-              </p>
-              <ScrollArea className="border rounded-lg max-h-48">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {previewColumns.map((col) => (
-                        <TableHead
-                          key={col}
-                          className="text-xs whitespace-nowrap"
-                        >
-                          {col}
-                        </TableHead>
-                      ))}
-                      {preview.columns.length > 8 && (
-                        <TableHead className="text-xs text-muted-foreground">
-                          +{preview.columns.length - 8} more
-                        </TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewRows.map((row, i) => (
-                      <TableRow key={i}>
-                        {previewColumns.map((col) => (
-                          <TableCell
-                            key={col}
-                            className="text-xs whitespace-nowrap max-w-[150px] truncate"
-                          >
-                            {row[col] ?? ""}
-                          </TableCell>
-                        ))}
-                        {preview.columns.length > 8 && (
-                          <TableCell className="text-xs text-muted-foreground">
-                            …
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2">
+            {/* Fixed bottom action buttons — always visible */}
+            <div className="shrink-0 border-t bg-background px-6 py-4 flex justify-end gap-3">
               <Button
                 variant="outline"
+                size="lg"
                 onClick={() => {
                   handleReset();
                   onOpenChange(false);
@@ -266,12 +274,12 @@ export function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
               >
                 Cancel
               </Button>
-              <Button onClick={handleConfirm} className="gap-2">
+              <Button onClick={handleConfirm} size="lg" className="gap-2 shadow-md">
                 <Upload className="h-4 w-4" />
                 Import {preview.rows.length} Rows
               </Button>
             </div>
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
