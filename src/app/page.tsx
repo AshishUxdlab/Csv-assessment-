@@ -33,7 +33,6 @@ import { DataTableSkeleton } from "@/components/data-table-skeleton";
 import { DataTable } from "@/components/data-table";
 import { CardsList } from "@/components/cards-list";
 import { SearchFilterBar } from "@/components/search-filter-bar";
-import { ViewControls } from "@/components/view-controls";
 import { CsvUploadDialog } from "@/components/csv-upload-dialog";
 import { AddEditDialog } from "@/components/add-edit-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
@@ -221,19 +220,12 @@ export default function HomePage() {
       </header>
 
       {/* ── Main Content Area ───────────────────────────────────── */}
-      <main className="flex-1 w-full px-3 md:px-8 py-6 space-y-6">
+      <main className="flex-1 w-full px-3 md:px-8 py-3 sm:py-6 space-y-3 sm:space-y-4">
         {!isMounted || isLoading ? (
           <DataTableSkeleton columnCount={8} rowCount={12} />
         ) : hasData ? (
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-              <div className="flex-1">
-                <SearchFilterBar />
-              </div>
-              <div className="shrink-0 pt-0.5">
-                <ViewControls />
-              </div>
-            </div>
+          <div className="space-y-3 sm:space-y-4">
+            <SearchFilterBar />
 
             {viewMode === "table" ? (
               <DataTable onEdit={handleEdit} onDelete={handleDelete} />

@@ -125,7 +125,7 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Table info */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <p>
@@ -285,9 +285,11 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Rows per page</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span className="whitespace-nowrap font-medium text-muted-foreground select-none">
+                Rows per page
+              </span>
               <Select
                 value={String(pageSize)}
                 onValueChange={(v) => {
@@ -295,7 +297,7 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="h-8 w-[70px] text-xs">
+                <SelectTrigger className="h-8 w-[72px] text-xs font-medium shrink-0 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -308,15 +310,15 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground tabular-nums">
+            <div className="flex items-center gap-3 sm:gap-4 shrink-0 flex-wrap justify-center sm:justify-end">
+              <span className="whitespace-nowrap font-medium tabular-nums text-foreground select-none">
                 Page {currentPage + 1} of {totalPages}
               </span>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   disabled={currentPage === 0}
                   onClick={() => setPage(0)}
                 >
@@ -325,7 +327,7 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   disabled={currentPage === 0}
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                 >
@@ -334,7 +336,7 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() =>
                     setPage((p) => Math.min(totalPages - 1, p + 1))
@@ -345,7 +347,7 @@ export function DataTable({ onEdit, onDelete }: DataTableProps) {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setPage(totalPages - 1)}
                 >

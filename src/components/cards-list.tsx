@@ -218,9 +218,11 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
 
       {/* Pagination Footer */}
       {filteredRows.length > 0 && (
-        <div className="flex items-center justify-between border-t pt-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Cards per page</span>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4 text-xs sm:text-sm text-muted-foreground">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="whitespace-nowrap font-medium text-muted-foreground select-none">
+              Cards per page
+            </span>
             <Select
               value={String(pageSize)}
               onValueChange={(v) => {
@@ -228,7 +230,7 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="h-8 w-[70px] text-xs">
+              <SelectTrigger className="h-8 w-[72px] text-xs font-medium shrink-0 bg-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -241,15 +243,15 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground tabular-nums">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0 flex-wrap justify-center sm:justify-end">
+            <span className="whitespace-nowrap font-medium tabular-nums text-foreground select-none">
               Page {currentPage + 1} of {totalPages}
             </span>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 disabled={currentPage === 0}
                 onClick={() => setPage(0)}
               >
@@ -258,7 +260,7 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 disabled={currentPage === 0}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
               >
@@ -267,7 +269,7 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 disabled={currentPage >= totalPages - 1}
                 onClick={() =>
                   setPage((p) => Math.min(totalPages - 1, p + 1))
@@ -278,7 +280,7 @@ export function CardsList({ onEdit, onDelete }: CardsListProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 disabled={currentPage >= totalPages - 1}
                 onClick={() => setPage(totalPages - 1)}
               >
