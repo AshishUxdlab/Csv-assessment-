@@ -10,10 +10,26 @@ AUD00004,2024-07-30,STR8413,Booker,Wholesale,Kolkata,East,Tresemme,Tresemme Kera
 AUD00005,2024-06-09,STR5807,D-Mart,Supermarket,Chennai,South,Garnier,Garnier Fructis Long & Strong,Long & Strong,340,290,Middle,Left,8,30,90,33.3,true,false,None,0,Head & Shoulders,22,Auditor_5,Normal stock,https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d
 `;
 
+// In-memory fallback for environments without a running MySQL instance (e.g. Vercel serverless)
+let memoryColumns: string[] = [];
+let memoryRows: Record<string, string>[] = [];
+
+function getInitialSample() {
+  if (memoryColumns.length === 0 && memoryRows.length === 0) {
+    const parsed = parseCsvString(SAMPLE_CSV);
+    memoryColumns = parsed.columns;
+    memoryRows = parsed.rows.map((r, i) => ({
+      ...r,
+      __row_id__: r["__row_id__"] || `row_${i + 1}`,
+    }));
+  }
+  return { columns: memoryColumns, rows: memoryRows };
+}
+
 export class CsvController {
   /**
    * GET /api/csv/data
-   * Controller to fetch columns and rows. Auto-seeds sample data if MySQL is empty.
+   * Controller to fetch columns and rows. Auto-seeds sample data if MySQL is empty or falls back to memory.
    */
   static async getCsvData() {
     try {
@@ -28,19 +44,22 @@ export class CsvController {
         rows = seeded.rows;
       }
 
-      return NextResponse.json({ success: true, columns, rows });
+      return NextResponse.json({ success: true, columns, rows, source: "mysql" });
     } catch (error: any) {
-      console.error("CsvController.getCsvData error:", error);
-      return NextResponse.json(
-        { success: false, error: error.message || "Failed to fetch data from database" },
-        { status: 500 }
-      );
+      console.warn("MySQL unavailable, falling back to memory/sample data:", error.message);
+      const fallback = getInitialSample();
+      return NextResponse.json({
+        success: true,
+        columns: fallback.columns,
+        rows: fallback.rows,
+        source: "memory_fallback",
+      });
     }
   }
 
   /**
    * POST /api/csv/upload
-   * Controller to handle CSV dataset upload and MySQL overwrite.
+   * Controller to handle CSV dataset upload and MySQL overwrite (or memory fallback).
    */
   static async uploadCsvData(request: Request) {
     try {
@@ -53,12 +72,30 @@ export class CsvController {
         );
       }
 
-      const result = await CsvModel.uploadDataset(columns, rows);
-      return NextResponse.json({
-        success: true,
-        columns: result.columns,
-        rows: result.rows,
-      });
+      try {
+        const result = await CsvModel.uploadDataset(columns, rows);
+        memoryColumns = result.columns;
+        memoryRows = result.rows;
+        return NextResponse.json({
+          success: true,
+          columns: result.columns,
+          rows: result.rows,
+          source: "mysql",
+        });
+      } catch (dbErr: any) {
+        console.warn("MySQL unavailable during upload, saving in memory:", dbErr.message);
+        memoryColumns = columns.filter((c) => c !== "__row_id__");
+        memoryRows = rows.map((r, i) => ({
+          ...r,
+          __row_id__: r["__row_id__"] || `upload_${Date.now()}_${i}`,
+        }));
+        return NextResponse.json({
+          success: true,
+          columns: memoryColumns,
+          rows: memoryRows,
+          source: "memory_fallback",
+        });
+      }
     } catch (error: any) {
       console.error("CsvController.uploadCsvData error:", error);
       return NextResponse.json(
@@ -70,7 +107,7 @@ export class CsvController {
 
   /**
    * POST /api/csv/rows
-   * Controller to create a new single row in MySQL.
+   * Controller to create a new single row in MySQL (or memory fallback).
    */
   static async createRow(request: Request) {
     try {
@@ -82,8 +119,16 @@ export class CsvController {
         );
       }
 
-      const createdRow = await CsvModel.createRow(rowData);
-      return NextResponse.json({ success: true, row: createdRow });
+      try {
+        const createdRow = await CsvModel.createRow(rowData);
+        memoryRows.unshift(createdRow);
+        return NextResponse.json({ success: true, row: createdRow, source: "mysql" });
+      } catch (dbErr: any) {
+        console.warn("MySQL unavailable during create, saving in memory:", dbErr.message);
+        const newRow = { ...rowData, __row_id__: `row_${Date.now()}` };
+        memoryRows.unshift(newRow);
+        return NextResponse.json({ success: true, row: newRow, source: "memory_fallback" });
+      }
     } catch (error: any) {
       console.error("CsvController.createRow error:", error);
       return NextResponse.json(
@@ -95,7 +140,7 @@ export class CsvController {
 
   /**
    * PUT /api/csv/rows/[id]
-   * Controller to update a single row in MySQL.
+   * Controller to update a single row in MySQL (or memory fallback).
    */
   static async updateRow(request: Request, id: string) {
     try {
@@ -107,9 +152,19 @@ export class CsvController {
       }
 
       const rowData = await request.json();
-      const updatedRow = await CsvModel.updateRow(id, rowData);
 
-      return NextResponse.json({ success: true, row: updatedRow });
+      try {
+        const updatedRow = await CsvModel.updateRow(id, rowData);
+        const idx = memoryRows.findIndex((r) => r["__row_id__"] === id);
+        if (idx !== -1) memoryRows[idx] = updatedRow;
+        return NextResponse.json({ success: true, row: updatedRow, source: "mysql" });
+      } catch (dbErr: any) {
+        console.warn("MySQL unavailable during update, updating in memory:", dbErr.message);
+        const updatedRow = { ...rowData, __row_id__: id };
+        const idx = memoryRows.findIndex((r) => r["__row_id__"] === id);
+        if (idx !== -1) memoryRows[idx] = updatedRow;
+        return NextResponse.json({ success: true, row: updatedRow, source: "memory_fallback" });
+      }
     } catch (error: any) {
       console.error("CsvController.updateRow error:", error);
       return NextResponse.json(
@@ -121,7 +176,7 @@ export class CsvController {
 
   /**
    * DELETE /api/csv/rows/[id]
-   * Controller to delete a single row from MySQL.
+   * Controller to delete a single row from MySQL (or memory fallback).
    */
   static async deleteRow(id: string) {
     try {
@@ -132,8 +187,15 @@ export class CsvController {
         );
       }
 
-      await CsvModel.deleteRow(id);
-      return NextResponse.json({ success: true, id });
+      try {
+        await CsvModel.deleteRow(id);
+        memoryRows = memoryRows.filter((r) => r["__row_id__"] !== id);
+        return NextResponse.json({ success: true, id, source: "mysql" });
+      } catch (dbErr: any) {
+        console.warn("MySQL unavailable during delete, removing from memory:", dbErr.message);
+        memoryRows = memoryRows.filter((r) => r["__row_id__"] !== id);
+        return NextResponse.json({ success: true, id, source: "memory_fallback" });
+      }
     } catch (error: any) {
       console.error("CsvController.deleteRow error:", error);
       return NextResponse.json(
@@ -145,11 +207,17 @@ export class CsvController {
 
   /**
    * DELETE /api/csv/data
-   * Controller to clear all data in MySQL.
+   * Controller to clear all data in MySQL (or memory fallback).
    */
   static async clearCsvData() {
     try {
-      await CsvModel.deleteAll();
+      try {
+        await CsvModel.deleteAll();
+      } catch (dbErr: any) {
+        console.warn("MySQL unavailable during clear, clearing memory:", dbErr.message);
+      }
+      memoryColumns = [];
+      memoryRows = [];
       return NextResponse.json({ success: true, message: "Database cleared successfully" });
     } catch (error: any) {
       console.error("CsvController.clearCsvData error:", error);

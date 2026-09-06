@@ -48,23 +48,35 @@ function saveToStorage(
 
 // ── Async Thunks for MySQL Backend Integration ─────────────────────
 export const fetchCsvData = createAsyncThunk("csv/fetchCsvData", async () => {
-  const res = await fetch("/api/csv/data");
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || "Failed to fetch CSV data");
-  return { rows: data.rows, columns: data.columns };
+  try {
+    const res = await fetch("/api/csv/data");
+    const data = await res.json();
+    if (data && data.success) {
+      return { rows: data.rows, columns: data.columns };
+    }
+  } catch (e) {
+    console.warn("API fetch failed, falling back gracefully:", e);
+  }
+  return { rows: [], columns: [] };
 });
 
 export const uploadCsvDataApi = createAsyncThunk(
   "csv/uploadCsvDataApi",
   async (payload: { rows: CsvRow[]; columns: string[] }) => {
-    const res = await fetch("/api/csv/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || "Failed to upload dataset");
-    return { rows: data.rows, columns: data.columns };
+    try {
+      const res = await fetch("/api/csv/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        return { rows: data.rows, columns: data.columns };
+      }
+    } catch (e) {
+      console.warn("API upload failed, saving locally:", e);
+    }
+    return { rows: payload.rows, columns: payload.columns };
   }
 );
 
