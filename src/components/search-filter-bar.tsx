@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, X, SlidersHorizontal, Filter } from "lucide-react";
+import { Search, X, SlidersHorizontal, Filter, Calendar } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/store";
 import {
   setSearchTerm,
@@ -46,13 +46,39 @@ export function SearchFilterBar() {
   const filters = useAppSelector((s) => s.csv.filters);
   const columns = useAppSelector((s) => s.csv.columns);
 
-  // Only show filter selects for columns that exist in data
+  // Check if date column exists in data
+  const dateColumn = useMemo(
+    () =>
+      columns.find(
+        (c) =>
+          c.toLowerCase() === "date" ||
+          c.toLowerCase().includes("date") ||
+          c.toLowerCase().includes("created_at")
+      ),
+    [columns]
+  );
+
+  // Only show filter selects for columns that exist in data (exclude date as it has dedicated picker)
   const availableFilterColumns = useMemo(
-    () => FILTER_COLUMNS.filter((c) => columns.includes(c)),
+    () =>
+      FILTER_COLUMNS.filter(
+        (c) => columns.includes(c) && c.toLowerCase() !== "date"
+      ),
     [columns]
   );
 
   const activeFilterCount = Object.keys(filters).length + (searchTerm ? 1 : 0);
+
+  const formatFilterBadgeLabel = (col: string, val: string) => {
+    if (col === "date_from") return `From: ${val}`;
+    if (col === "date_to") return `To: ${val}`;
+    if (col === "date") return `Date: ${val}`;
+    const label = col
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    return `${label}: ${val}`;
+  };
 
   return (
     <div className="space-y-2 w-full">
@@ -82,7 +108,9 @@ export function SearchFilterBar() {
         {Object.keys(filters).length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground shrink-0 font-medium">Active filters:</span>
+            <span className="text-xs text-muted-foreground shrink-0 font-medium">
+              Active filters:
+            </span>
             {Object.entries(filters).map(([col, val]) => (
               <Badge
                 key={col}
@@ -90,7 +118,7 @@ export function SearchFilterBar() {
                 className="gap-1 text-xs cursor-pointer hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
                 onClick={() => dispatch(setFilter({ column: col, value: "" }))}
               >
-                {col}: {val}
+                {formatFilterBadgeLabel(col, val)}
                 <X className="h-3 w-3" />
               </Badge>
             ))}
@@ -99,29 +127,41 @@ export function SearchFilterBar() {
 
         {/* Action Controls (Right side: Filters, Clear all, View mode toggle, Settings icon) */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          {/* Column filters Popover */}
-          {availableFilterColumns.length > 0 && (
+          {/* Filters Popover (Date + Column Filters) */}
+          {(availableFilterColumns.length > 0 || dateColumn) && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-8 px-2.5 border-muted-foreground/20 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-8 px-2.5 border-muted-foreground/20 text-xs"
+                >
                   <Filter className="h-3.5 w-3.5" />
                   <span className="font-medium">Filters</span>
                   {activeFilterCount > (searchTerm ? 1 : 0) && (
-                    <Badge variant="secondary" className="ml-0.5 px-1.5 py-0 text-[10px] h-4">
+                    <Badge
+                      variant="secondary"
+                      className="ml-0.5 px-1.5 py-0 text-[10px] h-4"
+                    >
                       {activeFilterCount - (searchTerm ? 1 : 0)}
                     </Badge>
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[300px] p-4">
+              <PopoverContent align="end" className="w-[320px] p-4">
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <h4 className="font-medium text-sm leading-none">Apply Filters</h4>
                     <p className="text-xs text-muted-foreground">
-                      Filter table data by specific column values.
+                      Filter table data by date range or specific column values.
                     </p>
                   </div>
-                  <div className="grid gap-3 max-h-[300px] overflow-y-auto scrollbar-hide pr-1">
+
+                  <div className="space-y-3 max-h-[350px] overflow-y-auto scrollbar-hide pr-1">
+                    {/* Dedicated Date Range Filter */}
+                    {dateColumn && <DateFilterSection dateColumn={dateColumn} />}
+
+                    {/* Categorical Column Filters */}
                     {availableFilterColumns.map((col) => (
                       <ColumnFilterSelect key={col} column={col} />
                     ))}
@@ -149,6 +189,75 @@ export function SearchFilterBar() {
 
           {/* View Controls: List/Grid mode toggle & Setting icon */}
           <ViewControls />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Date filter section ───────────────────────────────────────────
+function DateFilterSection({ dateColumn }: { dateColumn: string }) {
+  const dispatch = useAppDispatch();
+  const dateFrom = useAppSelector((s) => s.csv.filters["date_from"] ?? "");
+  const dateTo = useAppSelector((s) => s.csv.filters["date_to"] ?? "");
+  const exactDate = useAppSelector((s) => s.csv.filters["date"] ?? "");
+
+  const hasActiveDateFilter = Boolean(dateFrom || dateTo || exactDate);
+
+  const clearDateFilters = () => {
+    dispatch(setFilter({ column: "date_from", value: "" }));
+    dispatch(setFilter({ column: "date_to", value: "" }));
+    dispatch(setFilter({ column: "date", value: "" }));
+  };
+
+  return (
+    <div className="p-2.5 rounded-lg border bg-muted/20 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <Calendar className="h-3.5 w-3.5 text-primary" />
+          <span>Date Filter</span>
+        </div>
+        {hasActiveDateFilter && (
+          <button
+            onClick={clearDateFilters}
+            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Date Range: From / To */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase font-medium tracking-wider text-muted-foreground">
+            From
+          </label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              // Clear exact date if setting range
+              if (exactDate) dispatch(setFilter({ column: "date", value: "" }));
+              dispatch(setFilter({ column: "date_from", value: e.target.value }));
+            }}
+            className="h-8 text-xs bg-background px-2"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase font-medium tracking-wider text-muted-foreground">
+            To
+          </label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              // Clear exact date if setting range
+              if (exactDate) dispatch(setFilter({ column: "date", value: "" }));
+              dispatch(setFilter({ column: "date_to", value: e.target.value }));
+            }}
+            className="h-8 text-xs bg-background px-2"
+          />
         </div>
       </div>
     </div>

@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, X, CheckCircle2 } from "lucide-react";
 import { parseCsvFile, type ParseResult } from "@/lib/csv-parser";
 import { useAppDispatch } from "@/store/store";
-import { setData, setLoading } from "@/store/csvSlice";
+import { uploadCsvDataApi, setLoading } from "@/store/csvSlice";
 
 interface CsvUploadDialogProps {
   open: boolean;
@@ -84,15 +84,17 @@ export function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
     [handleFile]
   );
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!preview) return;
     dispatch(setLoading(true));
-    // Simulate a brief loading state for UX
-    setTimeout(() => {
-      dispatch(setData({ rows: preview.rows, columns: preview.columns }));
+    try {
+      await dispatch(uploadCsvDataApi({ rows: preview.rows, columns: preview.columns })).unwrap();
+    } catch (err: any) {
+      setError(err.message || "Failed to save CSV dataset to database.");
+    } finally {
       handleReset();
       onOpenChange(false);
-    }, 600);
+    }
   };
 
   const handleReset = () => {

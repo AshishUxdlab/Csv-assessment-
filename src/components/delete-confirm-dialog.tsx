@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useAppDispatch } from "@/store/store";
-import { deleteRow, setSelectedRowId } from "@/store/csvSlice";
+import { deleteRowApi, setSelectedRowId } from "@/store/csvSlice";
 import { toast } from "sonner";
 
 interface DeleteConfirmDialogProps {
@@ -26,11 +26,15 @@ export function DeleteConfirmDialog({
 }: DeleteConfirmDialogProps) {
   const dispatch = useAppDispatch();
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (rowId) {
-      dispatch(deleteRow(rowId));
-      dispatch(setSelectedRowId(null));
-      toast.success("Row deleted successfully");
+      try {
+        await dispatch(deleteRowApi(rowId)).unwrap();
+        dispatch(setSelectedRowId(null));
+        toast.success("Row deleted from database");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete row");
+      }
     }
     onOpenChange(false);
   };

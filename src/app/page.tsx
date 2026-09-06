@@ -21,6 +21,8 @@ import {
 import { useAppSelector, useAppDispatch } from "@/store/store";
 import {
   clearData,
+  clearDataApi,
+  fetchCsvData,
   selectFilteredRows,
   loadFromStorage,
   setViewMode,
@@ -60,10 +62,11 @@ export default function HomePage() {
   // Hydration state
   const [isMounted, setIsMounted] = useState(false);
 
-  // Load state from local storage on mount
+  // Load state from MySQL backend on mount
   useEffect(() => {
     setIsMounted(true);
     dispatch(loadFromStorage());
+    dispatch(fetchCsvData());
 
     // Auto-detect view mode on mount if not previously stored
     const stored = localStorage.getItem("csv_demo_state");
@@ -178,7 +181,7 @@ export default function HomePage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive shrink-0"
-                      onClick={() => dispatch(clearData())}
+                      onClick={() => dispatch(clearDataApi())}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

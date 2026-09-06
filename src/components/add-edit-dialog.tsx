@@ -16,8 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, Plus } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/store";
 import {
-  addRow,
-  updateRow,
+  createRowApi,
+  updateRowApi,
   setSelectedRowId,
   ROW_ID_KEY,
   type CsvRow,
@@ -70,17 +70,21 @@ export function AddEditDialog({
     setFormData((prev) => ({ ...prev, [col]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEdit && editRowId) {
-      dispatch(updateRow({ rowId: editRowId, data: formData }));
-      dispatch(setSelectedRowId(null));
-      toast.success("Row updated successfully");
-    } else {
-      dispatch(addRow(formData));
-      toast.success("New row added successfully");
+    try {
+      if (isEdit && editRowId) {
+        await dispatch(updateRowApi({ rowId: editRowId, data: formData })).unwrap();
+        dispatch(setSelectedRowId(null));
+        toast.success("Row updated in database");
+      } else {
+        await dispatch(createRowApi(formData)).unwrap();
+        toast.success("New row saved to database");
+      }
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err.message || "Database operation failed");
     }
-    onOpenChange(false);
   };
 
   // Nicer label from column names
